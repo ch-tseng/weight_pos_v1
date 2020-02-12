@@ -24,7 +24,7 @@ weight_unit = 'twkg'  #twkg, kg, gram
 lang = "TW"  #TW, EN
 
 wait_for_next = 3  #second
-cart_list_size = (320,250) #(y,x)
+cart_list_size = (350,250) #(y,x)
 #-------------------------------------------------------------------------
 
 yolo = opencvYOLO(modeltype="yolov3-tiny", \

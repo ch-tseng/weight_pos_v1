@@ -21,13 +21,11 @@ cfg = ConfigParser()
 cfg.read("pos.ini",encoding="utf-8")
 
 cam_id = cfg.getint("camera", "cam_id")
-idle_checkout = ast.literal_eval(cfg.get("operation", "idle_checkout"))
 record_video = cfg.getboolean("camera", "record_video")
 video_out = cfg.get("camera", "record_video")
 frame_rate = cfg.getint("camera", "frame_rate")
 dt = desktop(cfg.get("desktop", "bg"))
 flipFrame = cfg.get("camera", "flipFrame") #(H, V)
-weight_unit = cfg.get("checkout", "weight_unit")
 lang = cfg.get("operation", "lang")
 
 wait_for_next = cfg.getint("operation", "wait_for_next")
@@ -269,10 +267,6 @@ if __name__ == "__main__":
             waiting = time.time() - last_movetime
             timeout_move = str(int(time.time()-last_movetime))
             txtStatus = "Idle:" + timeout_move
-
-            #if( (waiting > idle_checkout[0] and waiting<idle_checkout[1]) ):
-            #    txtStatus = "Caculate"
-            #    YOLO = True
 
         #frame = img_padding(frame_org, width)
         #print("resize:", frame.shape)

@@ -22,7 +22,9 @@ cfg.read("pos.ini",encoding="utf-8")
 
 cam_id = cfg.getint("camera", "cam_id")
 idle_checkout = ast.literal_eval(cfg.get("operation", "idle_checkout"))
+record_video = cfg.getboolean("camera", "record_video")
 video_out = cfg.get("camera", "record_video")
+frame_rate = cfg.getint("camera", "frame_rate")
 dt = desktop(cfg.get("desktop", "bg"))
 flipFrame = cfg.get("camera", "flipFrame") #(H, V)
 weight_unit = cfg.get("checkout", "weight_unit")
@@ -215,6 +217,9 @@ def click_caculate(event, x, y, flags, param):
                 YOLO = True
 
     elif((x>=25 and x<=110) and (y>=10 and y<=70)):
+        if(record_video is True and len(video_out)>0):
+            out.release()
+
         sys.exit()
         #pass
         #call("sudo nohup shutdown -h now", shell=True)
@@ -234,17 +239,16 @@ if __name__ == "__main__":
     width = int(INPUT.get(cv2.CAP_PROP_FRAME_WIDTH))   # float
     height = int(INPUT.get(cv2.CAP_PROP_FRAME_HEIGHT)) # float
 
+    if(record_video is True and len(video_out)>0):
+        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+        out = cv2.VideoWriter(video_out,fourcc, frame_rate, (int(width),int(height)))
+
+
     frameID = 0
     hasFrame, frame_org = INPUT.read()
 
     while hasFrame:
         width, height = frame_org.shape[1], frame_org.shape[0]
-        #print("size:", width, height)
-        #if not hasFrame:
-        #    print("Done processing !!!")
-        #    print("--- %s seconds ---" % (time.time() - start_time))
-        #    break
-
 
         if(flipFrame[0] is True):
             frame_org = cv2.flip(frame_org, 1 , dst=None)
@@ -390,8 +394,8 @@ if __name__ == "__main__":
 
         #dt.emptyBG = frame.copy()
         #dt.emptyBG_time = time.time()
-        #if(video_out!=""):
-        #out.write(frame)
+        if(record_video is True and len(video_out)>0):
+            out.write(imgDisplay)
         
         #k = cv2.waitKey(1)
         #if k == 0xFF & ord("q"):

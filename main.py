@@ -8,6 +8,8 @@ import imutils
 import time
 from libPOS import desktop
 from libPOS import weight_HX711
+from configparser import ConfigParser
+import ast
 #from playsound import playsound
 import numpy as np
 from subprocess import call
@@ -15,27 +17,25 @@ from subprocess import call
 #GPIO.setmode(GPIO.BCM)
 
 #------------------------------------------------------------------------
-cam_id = 0
-idle_checkout = (8, 10)
-video_out = "output.avi"
-dt = desktop("images/bg.jpg", "images/bgClick.jpg")
-flipFrame = (False,False) #(H, V)
-weight_unit = 'twkg'  #twkg, kg, gram
-lang = "TW"  #TW, EN
+cfg = ConfigParser()
+cfg.read("pos.ini",encoding="utf-8")
 
-wait_for_next = 3  #second
-cart_list_size = (350,250) #(y,x)
-#-------------------------------------------------------------------------
+cam_id = cfg.getint("camera", "cam_id")
+idle_checkout = ast.literal_eval(cfg.get("operation", "idle_checkout"))
+video_out = cfg.get("camera", "record_video")
+dt = desktop(cfg.get("desktop", "bg"))
+flipFrame = cfg.get("camera", "flipFrame") #(H, V)
+weight_unit = cfg.get("checkout", "weight_unit")
+lang = cfg.get("operation", "lang")
 
-yolo = opencvYOLO(modeltype="yolov3-tiny", \
-    objnames="cfg_fake_geteables/obj.names", \
-    weights="cfg_fake_geteables/weights/yolov3-tiny_483000.weights",\
-    cfg="cfg_fake_geteables/yolov3-tiny.cfg")
-'''
-yolo = opencvYOLO(modeltype="yolov3", \
-    objnames="cfg.pos_machine_breads_yolov3/obj.names", \
-    weights="cfg.pos_machine_breads_yolov3/weights/yolov3_542000.weights",\
-    cfg="cfg.pos_machine_breads_yolov3/yolov3.cfg")
+wait_for_next = cfg.getint("operation", "wait_for_next")
+cart_list_size = ast.literal_eval(cfg.get("desktop", "cart_list_size"))
+
+yolo = opencvYOLO(modeltype=cfg.get("yoloModel", "modeltype"), \
+    objnames=cfg.get("yoloModel", "objnames"),\
+    weights=cfg.get("yoloModel", "weights"),\
+    cfg=cfg.get("yoloModel", "cfg"))
+
 '''
 labels_tw = {"v1":["蓮藕", 36, "twkg"], "v2":["小蕃茄", 25, "twkg"], "v3":["綠彩椒",30, "twkg"], "v4":["紅彩椒",30, "twkg"], \
     "v5":["黃彩椒",30, "twkg"], "v6":["茄子", 18, "twkg"], "v7":["老薑",21, "twkg"], "v8":["綠辣椒",8, "twkg"],\
@@ -43,15 +43,23 @@ labels_tw = {"v1":["蓮藕", 36, "twkg"], "v2":["小蕃茄", 25, "twkg"], "v3":[
     "v13":["雞蛋",11, "twkg"], "v14":["紅蘿蔔",32, "twkg"], "v15":["馬玲薯",10, "twkg"], "v16":["洋菇",6, "twkg"], "v17":["大白菜",52, "twkg"], \
     "v18":["玉米",21, "twkg"], "v19":["小南瓜",60, "twkg"], "v20":["牛蕃茄",26, "twkg"], "v21":["紫地瓜",26, "twkg"]}
 
+labels_tw = {"v1":["橘子", 42, "twkg"], "v2":["雞蛋", 10, "one"], "v3":["綠辣椒", 18, "twkg"], "v4":["玉米荀", 0.25, "gram"],\
+    "v5":["小蕃茄", 12, "twkg"], "v6":["棗子", 30, "one"], "v7":["哈密瓜", 65, "kg"], "v8":["蘋果", 25, "one"], \
+    "v20": ["紅蘿蔔", 8, "twkg"], "v22":["牛奶芭樂", 20, "one"], "v23":["帶殼玉米荀", 0.15, "gram"] }
 
 labels_en = { "001":["Croissant", 36], "002":["Hot dog", 75], "003":["Big bag",40], "004":["Pineapple",32], \
     "005":["Sesame bun",25], "006":["Hamburger", 66],"007":["Danish Bread",38], "008":["Twist roll",55],\
     "009":["Donuts",22], "010":["Meal bag",28], "011":["Powdered milk",32], "012":["Long Fort",42],\
     "013":["Sandwich",18] }
+'''
+labels_tw = ast.literal_eval(cfg.get("products", "labels_tw"))
 
-cv2.namedWindow("BREADS_POS", cv2.WND_PROP_FULLSCREEN)        # Create a named window
-cv2.setWindowProperty("BREADS_POS", cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
-detection = "蔬菜"
+if(cfg.getboolean("system", "full_screen") is True):
+    cv2.namedWindow(cfg.get("system", "name_win"), cv2.WND_PROP_FULLSCREEN)        # Create a named window
+    cv2.setWindowProperty(cfg.get("system", "name_win"), cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+
+detection = cfg.get("desktop", "detection_txt")
+#-------------------------------------------------------------------
 
 start_time = time.time()
 dt.emptyBG = None
@@ -270,7 +278,7 @@ if __name__ == "__main__":
 
         if(YOLO is True):
             yoloStart = time.time()
-            print("YOLO start...")
+            #print("YOLO start...")
             #cv2.imwrite("labeling/"+str(time.time())+".jpg", frame)
 
             if(lang=="TW"):
@@ -281,7 +289,7 @@ if __name__ == "__main__":
             last_YOLO = YOLO
             YOLO = False
             yolo.getObject(frame, labelWant="", drawBox=False, bold=1, textsize=0.35, bcolor=(0,0,255), tcolor=(255,255,255))
-
+            #print("TEST:", yolo.labelNames)
             for id, label in enumerate(yolo.labelNames):
                 x = yolo.bbox[id][0]
                 y = yolo.bbox[id][1]
@@ -292,11 +300,22 @@ if __name__ == "__main__":
                 if(lang == "EN"):
                     frame = desktop.printText(desktop, txt=labels[label][0], bg=frame, color=(0,255,0,0), size=0.75, pos=(cx,cy), type="English")
                 else:
-                    #print(labels[label][0], (cx,cy))
+                    print(labels[label][0], (cx,cy))
                     frame = desktop.printText(desktop, txt=labels[label][0], bg=frame, color=(0,255,0,0), size=0.55, pos=(cx,cy), type="Chinese")
                     weight_unit = labels[label][2]
 
             if(len(yolo.labelNames)>0):
+                types = group(yolo.labelNames)
+                shoplist = []
+                itemname_list = ""
+                count_total_item = 0
+                for i, items in enumerate(types):
+                    shoplist.append([items[0], labels[items[0]][0], labels[items[0]][1], len(items)])
+                    itemname = labels[items[0]][0]
+                    if(i>0): itemname = ","+labels[items[0]][0]
+                    itemname_list = itemname_list + itemname
+                    count_total_item += len(items)
+
                 weight_gross = weightDevice.weight()
                 if(weight_gross<0):
                     weight_clean = 0
@@ -309,24 +328,33 @@ if __name__ == "__main__":
                         weight_clean = round(weight_gross,1)
                     elif(weight_unit=='gram'):
                         weight_clean = int(weight_gross)
+                    elif(weight_unit=='one'):
+                        weight_clean = count_total_item
 
 
                 print("Weight:", weight_unit, weight_gross, weight_clean)
 
                 if(not weight_clean>0):
                     continue
-
+                '''
                 types = group(yolo.labelNames)
-                print("Labels:", types)
                 shoplist = []
-                for items in types:
+                itemname_list = ""
+                count_total_item = 0
+                for i, items in enumerate(types):
                     shoplist.append([items[0], labels[items[0]][0], labels[items[0]][1], len(items)])
-                    cart_list.append( (labels[items[0]][0], len(items), weight_clean, weight_unit, labels[items[0]][1]) )
-                    print("Append --->", labels[items[0]][0], len(items), weight_clean, weight_unit, labels[items[0]][1])
+                    itemname = labels[items[0]][0]
+                    if(i>0): itemname = ","+labels[items[0]][0]
+                    itemname_list = itemname_list + itemname
+                    count_total_item += len(items)
+                    #cart_list.append( (labels[items[0]][0], len(items), weight_clean, weight_unit, labels[items[0]][1]) )
+                    #print("Append --->", labels[items[0]][0], len(items), weight_clean, weight_unit, labels[items[0]][1])
                     #desktop.printText(labels[items[0]][0], frame, color=(255,255,0,0), size=0.6, pos=(0,0), type="Chinese")
-
+                '''
+                cart_list.append( (itemname_list, count_total_item, weight_clean, weight_unit, labels[types[0][0]][1]) )
+                print("Append --->", (itemname_list, count_total_item, weight_clean, weight_unit, labels[types[0][0]][1]))
                 txtStatus = "checkout"
-                print(shoplist)
+                #print(shoplist)
 
                 imgDisplay = dt.displayWeight(detection, frame, txtStatus, shoplist, weight_unit, weight_clean)
                 cv2.imshow("BREADS_POS", imgDisplay)
